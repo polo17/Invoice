@@ -76,9 +76,43 @@ public class DAO {
 	 * taille
 	 * @throws java.lang.Exception si la transaction a échoué
 	 */
-	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities)
-		throws Exception {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities) throws Exception {
+            
+            int prix[] = new int [productIDs.length];
+            int Total = 0;
+            int customerID=customer.getCustomerId();
+            
+            String sql = "SELECT Price FROM Product WHERE ID = ? ";
+            
+            for (int i =0;i<productIDs.length;i++){
+            
+		try (Connection connection = myDataSource.getConnection();
+			PreparedStatement stmt = connection.prepareStatement(sql)) {
+			stmt.setInt(1, productIDs[i]);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				prix[i] = rs.getInt("Price");
+                                Total = Total + prix[i] * quantities[i];
+			}
+		}
+            }
+            int essai = 653748;
+            String sql_final = "INSERT INTO Invoice VALUES (?,?,?) ";
+            
+            try (Connection connection = myDataSource.getConnection();
+		PreparedStatement stmt = connection.prepareStatement(sql_final, Statement.RETURN_GENERATED_KEYS)) {
+               
+                ResultSet clefs = stmt.getGeneratedKeys();
+                
+                stmt.executeUpdate(); 
+                clefs.next();
+                stmt.setInt(1,clefs.getInt(1));
+                stmt.setInt(2, customerID);
+		stmt.setInt(3, Total);
+                //stmt.setInt(4,clefs.getInt(2));
+                ResultSet rs = stmt.executeQuery(sql_final);
+		
+            }
 	}
 
 	/**
