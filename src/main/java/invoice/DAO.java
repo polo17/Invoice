@@ -78,42 +78,45 @@ public class DAO {
 	 */
 	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities) throws Exception {
             
-            int prix[] = new int [productIDs.length];
-            int Total = 0;
-            int customerID=customer.getCustomerId();
-            
-            String sql = "SELECT Price FROM Product WHERE ID = ? ";
-            
-            for (int i =0;i<productIDs.length;i++){
-            
-		try (Connection connection = myDataSource.getConnection();
-			PreparedStatement stmt = connection.prepareStatement(sql)) {
-			stmt.setInt(1, productIDs[i]);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next()) {
-				prix[i] = rs.getInt("Price");
-                                Total = Total + prix[i] * quantities[i];
-			}
-		}
-            }
-            int essai = 653748;
-            String sql_final = "INSERT INTO Invoice VALUES (?,?,?) ";
-            
-            try (Connection connection = myDataSource.getConnection();
-		PreparedStatement stmt = connection.prepareStatement(sql_final, Statement.RETURN_GENERATED_KEYS)) {
-               
-                ResultSet clefs = stmt.getGeneratedKeys();
-                
-                stmt.executeUpdate(); 
-                clefs.next();
-                stmt.setInt(1,clefs.getInt(1));
-                stmt.setInt(2, customerID);
-		stmt.setInt(3, Total);
-                //stmt.setInt(4,clefs.getInt(2));
-                ResultSet rs = stmt.executeQuery(sql_final);
+		String sql_final = "INSERT INTO Invoice VALUES(?,?,?)";  //on insert les valeurs dans la table invoice sauf la clé étrangère
 		
-            }
+        Object[] invo = { numberOfInvoicesForCustomer(customer.getCustomerId())+1, customer.getCustomerId(), getTotal(productIDs, quantities)};
+        //la ligne sera un objet contenant l'id du clieent, l'id de la facture et le montant de celle ci
+        
+        try (Connection connection = myDataSource.getConnection();
+                PreparedStatement stmt = connection.prepareStatement(sql_final))
+           { 
+	            stmt.setObject(1, invo[0]);  //on introduit les valeurs dans la table
+	            stmt.setObject(2, invo[1]);
+	            stmt.setObject(3, invo[2]);
+	            stmt.executeUpdate();  //mise a jour
+	        }
+	
 	}
+	
+    public int getTotal(int[] productIDs, int[] quantities) throws SQLException  //pour avoir le total en fonction de la quantité et du produit
+    {
+        int tot=0;
+        String sql_prix = "SELECT Price AS NUMBER FROM Product WHERE ID = ?";  //on récupère le prix
+        
+        for(int i=0; i<productIDs.length; i++) //pour tous les produits indiqués
+        {
+            try (Connection connection = myDataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql_prix)) {
+            	
+               statement.setInt(1, productIDs[i]);
+               
+               try (ResultSet resultSet = statement.executeQuery()) {
+            	   
+                   if (resultSet.next()) {
+                           tot = resultSet.getInt("NUMBER");  //on récupère le nombre
+                           tot = tot + resultSet.getInt("NUMBER")*quantities[i]; //on la multiplie par la quatité
+                   }
+               }
+           }
+       }
+       return total; //on renvoie le total
+   }
 
 	/**
 	 *
